@@ -300,6 +300,21 @@ client.on("message", async message => {
     }
   }
 
+  if (command === "help") {
+    if (args.length == 0) {
+      var helpEmbed = new Discord.RichEmbed()
+        .setTitle(`Commands`)
+        .addField(">register steam64", `Register to start playing`)
+        .addField(">stats user", `Returns user's Salien stats (user can be a ping or id)`)
+        .addField(">activeplanets", `Lists active planets and their progress`)
+        .setThumbnail('https://cdn.discordapp.com/emojis/462711870512562176.gif?v=1')
+        .setColor('#e9f634');
+      message.channel.send(helpEmbed);
+    } else {
+      message.channel.send(errorEmbed("Command takes no arguments", ">help"));
+    }
+  }
+
   fs.writeFile("./playerdata.json", JSON.stringify(playerdata), (err) => {
     if (err) console.error(err)
   });
