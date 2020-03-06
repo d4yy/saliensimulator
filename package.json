@@ -1,0 +1,31 @@
+{
+  "name": "saliensimulator",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {
+    "@discordjs/opus": "^0.1.0",
+    "axios": "^0.19.2",
+    "canvas": "^2.6.1",
+    "cheerio": "^1.0.0-rc.3",
+    "colors": "^1.4.0",
+    "discord.js": "^11.5.1",
+    "fs": "^0.0.1-security",
+    "htmlparser2": "^4.1.0",
+    "jquery": "^3.4.1",
+    "jsdom": "^16.2.0",
+    "merge-images": "^1.1.0",
+    "merge-images-v2": "^2.0.1",
+    "node-fetch": "^2.6.0",
+    "node-opus": "^0.3.3",
+    "node-schedule": "^1.3.2",
+    "rename": "^1.0.4",
+    "stream": "^0.0.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Day",
+  "license": "ISC"
+}
