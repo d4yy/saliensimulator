@@ -17,27 +17,27 @@ var schedule = require('node-schedule');
 const client = new Discord.Client();
 
 client.on("ready", () => {
-  console.log(`++ Bot Online\n`.bold.brightWhite + `Servers > `.brightYellow + `${client.guilds.size}\n`.brightRed + `Channels > `.brightYellow + `${client.channels.size}\n`.brightRed + `Users > `.brightYellow + `${client.users.size}`.brightRed);
+  console.log(`++ Bot Online\n`.bold.brightWhite + `Servers > `.brightYellow + `${client.guilds.cache.size}\n`.brightRed + `Channels > `.brightYellow + `${client.channels.cache.size}\n`.brightRed + `Users > `.brightYellow + `${client.users.cache.size}`.brightRed);
   setInterval(function() {
     onPlanetUpdate();
   }, 1000);
-  /*let channel = client.channels.get('685257949429366846');
+  /*let channel = client.channels.cache.get('685257949429366846');
   channel.join().then(connection => {
-    function play(aud) {
-      const dispatcher = aud.playFile('./battle.mp3', {volume: 1});
+    function playA(aud) {
+      const dispatcher = aud.play('./battle.mp3', {volume: 1});
       dispatcher.on('end', () => {
         console.log("end");
-        play(connection);
+        playA(connection);
       });
     }
-    play(connection)
+    playA(connection)
   })*/
 });
 
 client.login(config.token);
 
 function errorEmbed(error, correct) {
-  var embed = new Discord.RichEmbed()
+  var embed = new Discord.MessageEmbed()
     .setTitle('Error')
     .setColor('#ff0000')
     .addField(error, correct);
@@ -296,7 +296,7 @@ client.on("message", async message => {
   if (message.author.bot) return;
   if (message.content.indexOf(config.prefix) !== 0) return;
   //if (message.guild.id != 459435127932715008) return; //bot only works in Summer Saliens server
-  var guildWhitelist = client.guilds.get('583416800264323074');
+  var guildWhitelist = client.guilds.cache.get('583416800264323074');
 
   const args = message.content.slice(config.prefix.length).trim().split(/ +/g);
   const command = args.shift().toLowerCase();
@@ -321,7 +321,7 @@ client.on("message", async message => {
               nextxp: 0,
               embattled: false
             };
-            var successEmbed = new Discord.RichEmbed()
+            var successEmbed = new Discord.MessageEmbed()
               .setTitle(`Success!`)
               .setColor('#00ff00');
             message.channel.send(successEmbed);
@@ -399,13 +399,13 @@ client.on("message", async message => {
                   Canvas: Canvas
                 })
                 .then(b64 => {
-                  client.fetchUser(userID).then(value => {
+                  client.users.fetch(userID).then(value => {
                     let data = b64
                     let imageBuffer = decodeBase64Image(data);
-                    const attachment = new Discord.Attachment(imageBuffer.data, 'salien.png');
-                    var statEmbed = new Discord.RichEmbed()
+                    const attachment = new Discord.MessageAttachment(imageBuffer.data, 'salien.png');
+                    var statEmbed = new Discord.MessageEmbed()
                       .setTitle(`Stats`)
-                      .attachFile(attachment)
+                      .attachFiles(attachment)
                       .setThumbnail('attachment://salien.png')
                       .addField("Salien Rank", `${playerdata[userID].rank}`)
                       .addField("Total XP", `${playerdata[userID].xp}`)
@@ -416,11 +416,11 @@ client.on("message", async message => {
                   }).catch(console.error);
                 });
             } else {
-              client.fetchUser(userID).then(value => {
-                const attachment = new Discord.Attachment('./salien_not_found.png', 'salien.png');
-                var statEmbed = new Discord.RichEmbed()
+              client.users.fetch(userID).then(value => {
+                const attachment = new Discord.MessageAttachment('./salien_not_found.png', 'salien.png');
+                var statEmbed = new Discord.MessageEmbed()
                   .setTitle(`Stats`)
-                  .attachFile(attachment)
+                  .attachFiles(attachment)
                   .setThumbnail('attachment://salien.png')
                   .addField("Salien Rank", `${playerdata[userID].rank}`)
                   .addField("Total XP", `${playerdata[userID].xp}`)
@@ -494,9 +494,9 @@ client.on("message", async message => {
         .then(b64 => {
           let data = b64
           let imageBuffer = decodeBase64Image(data);
-          const attachment = new Discord.Attachment(imageBuffer.data, 'planets.png');
-          var apEmbed = new Discord.RichEmbed()
-            .attachFile(attachment)
+          const attachment = new Discord.MessageAttachment(imageBuffer.data, 'planets.png');
+          var apEmbed = new Discord.MessageEmbed()
+            .attachFiles(attachment)
             .setImage('attachment://planets.png')
             .setColor('#e9f634')
             .addField(`${planets.planets.getByIndex(activePlanets[0]).stats.name} - ${planets.planets.getByIndex(activePlanets[0]).id}`, `${(planets.planets.getByIndex(activePlanets[0]).stats.progress * 100).toFixed(2)}% Captured, ${planets.planets.getByIndex(activePlanets[0]).stats.total_joins} Players`)
@@ -513,7 +513,7 @@ client.on("message", async message => {
 
   if (command === "help") {
     if (args.length == 0) {
-      var helpEmbed = new Discord.RichEmbed()
+      var helpEmbed = new Discord.MessageEmbed()
         .setTitle(`Commands`)
         .addField(">register steam64", `Register to start playing`)
         .addField(">stats user", `Returns user's Salien stats (user can be a ping or id)`)
@@ -542,10 +542,10 @@ client.on("message", async message => {
           .then(b64 => {
             let data = b64
             var baseMap = decodeBase64Image(data);
-            const planetImg = new Discord.Attachment(baseMap.data, 'map.png'); //117x107 grid tile size
-            var planetEmbed = new Discord.RichEmbed()
+            const planetImg = new Discord.MessageAttachment(baseMap.data, 'map.png'); //117x107 grid tile size
+            var planetEmbed = new Discord.MessageEmbed()
               .setTitle(`${reqPlanet.stats.name} - ${reqPlanet.id}`)
-              .attachFile(planetImg)
+              .attachFiles(planetImg)
               .setThumbnail(`https://raw.githubusercontent.com/NunzioArdi/saliengame/master/steamcdn-a.akamaihd.net/steamcommunity/public/assets/saliengame/planets/Planet${reqPlanet.stats.image_filename}`)
               .setImage('attachment://map.png')
               .addField("Progress", `${(reqPlanet.stats.progress * 100).toFixed(2)}%`)
@@ -605,17 +605,17 @@ client.on("message", async message => {
             })
             .then(target => {
               //console.log(target);
-              client.fetchUser(message.author.id).then(value => {
+              client.users.fetch(message.author.id).then(value => {
                 var targetMap = decodeBase64Image(target);
-                const battleImg = new Discord.Attachment(targetMap.data, 'map.png'); //117x107 grid tile size
-                var battleEmbed = new Discord.RichEmbed()
+                const battleImg = new Discord.MessageAttachment(targetMap.data, 'map.png'); //117x107 grid tile size
+                var battleEmbed = new Discord.MessageEmbed()
                   .setTitle(`Joining Zone`)
                   .addField("Planet", `Planet ${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).id} (${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).stats.name})`)
                   .addField("Zone", `${playerdata[battleID].current_zone}`)
                   .addField("Difficulty", jZoneDif)
                   .addField("Progress", `${Math.round(planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).zones.getByIndex(playerdata[battleID].current_zone - 1).progress * 100)}%`)
                   .addField("Time Left", `**${timer}s**`)
-                  .attachFile(battleImg)
+                  .attachFiles(battleImg)
                   .setThumbnail(`https://raw.githubusercontent.com/NunzioArdi/saliengame/master/steamcdn-a.akamaihd.net/steamcommunity/public/assets/saliengame/planets/Planet${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).stats.image_filename}`)
                   .setImage('attachment://map.png')
                   .setTimestamp()
@@ -625,7 +625,7 @@ client.on("message", async message => {
                 message.channel.send(battleEmbed).then(msg => {
                   var battleInt = setInterval(function() {
                     timer -= 5;
-                    var newBattleEmbed = new Discord.RichEmbed()
+                    var newBattleEmbed = new Discord.MessageEmbed()
                       .setTitle(`Embattled`)
                       .addField("Planet", `Planet ${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).id} (${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).stats.name})`)
                       .addField("Zone", `${playerdata[battleID].current_zone}`)
@@ -639,7 +639,7 @@ client.on("message", async message => {
                       .setColor('#e9f634');
                     msg.edit(newBattleEmbed)
                     if (timer === 0) {
-                      var finalBattleEmbed = new Discord.RichEmbed()
+                      var finalBattleEmbed = new Discord.MessageEmbed()
                         .setTitle(`Battle Complete`)
                         .addField("Planet", `Planet ${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).id} (${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).stats.name})`)
                         .addField("Zone", `${playerdata[battleID].current_zone}`)
@@ -658,7 +658,7 @@ client.on("message", async message => {
                   }, 5000);
                 })
                 /*setTimeout(function() {
-                  var finishEmbed = new Discord.RichEmbed()
+                  var finishEmbed = new Discord.MessageEmbed()
                     .setTitle(`Battle Finished`)
                     .addField("Score", `${playerdata[message.author.id].xp} (+${playerdata[message.author.id].nextxp})`)
                     .setTimestamp()
@@ -715,17 +715,17 @@ if (command === "auto") {
             })
             .then(target => {
               //console.log(target);
-              client.fetchUser(message.author.id).then(value => {
+              client.users.fetch(message.author.id).then(value => {
                 var targetMap = decodeBase64Image(target);
-                const battleImg = new Discord.Attachment(targetMap.data, 'map.png'); //117x107 grid tile size
-                var battleEmbed = new Discord.RichEmbed()
+                const battleImg = new Discord.MessageAttachment(targetMap.data, 'map.png'); //117x107 grid tile size
+                var battleEmbed = new Discord.MessageEmbed()
                   .setTitle(`Joining Zone`)
                   .addField("Planet", `Planet ${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).id} (${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).stats.name})`)
                   .addField("Zone", `${playerdata[battleID].current_zone}`)
                   .addField("Difficulty", jZoneDif)
                   .addField("Progress", `${Math.round(planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).zones.getByIndex(playerdata[battleID].current_zone - 1).progress * 100)}%`)
                   .addField("Time Left", `**${timer}s**`)
-                  .attachFile(battleImg)
+                  .attachFiles(battleImg)
                   .setThumbnail(`https://raw.githubusercontent.com/NunzioArdi/saliengame/master/steamcdn-a.akamaihd.net/steamcommunity/public/assets/saliengame/planets/Planet${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).stats.image_filename}`)
                   .setImage('attachment://map.png')
                   .setTimestamp()
@@ -735,7 +735,7 @@ if (command === "auto") {
                 message.channel.send(battleEmbed).then(msg => {
                   var battleInt = setInterval(function() {
                     timer -= 5;
-                    var newBattleEmbed = new Discord.RichEmbed()
+                    var newBattleEmbed = new Discord.MessageEmbed()
                       .setTitle(`Embattled`)
                       .addField("Planet", `Planet ${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).id} (${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).stats.name})`)
                       .addField("Zone", `${playerdata[battleID].current_zone}`)
@@ -749,7 +749,7 @@ if (command === "auto") {
                       .setColor('#e9f634');
                     msg.edit(newBattleEmbed)
                     if (timer === 0) {
-                      var finalBattleEmbed = new Discord.RichEmbed()
+                      var finalBattleEmbed = new Discord.MessageEmbed()
                         .setTitle(`Battle Complete`)
                         .addField("Planet", `Planet ${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).id} (${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).stats.name})`)
                         .addField("Zone", `${playerdata[battleID].current_zone}`)
@@ -768,7 +768,7 @@ if (command === "auto") {
                   }, 5000);
                 })
                 /*setTimeout(function() {
-                  var finishEmbed = new Discord.RichEmbed()
+                  var finishEmbed = new Discord.MessageEmbed()
                     .setTitle(`Battle Finished`)
                     .addField("Score", `${playerdata[message.author.id].xp} (+${playerdata[message.author.id].nextxp})`)
                     .setTimestamp()
