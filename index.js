@@ -16,22 +16,33 @@ var schedule = require('node-schedule');
 
 const client = new Discord.Client();
 
+const playerdata = JSON.parse(fs.readFileSync("./playerdata.json", "utf8"));
+const planets = JSON.parse(fs.readFileSync("./planets.json", "utf8"));
+
+Object.prototype.getByIndex = function(index) {
+  return this[Object.keys(this)[index]];
+};
+
 client.on("ready", () => {
+  let channel = client.channels.cache.get('685257949429366846');
   console.log(`++ Bot Online\n`.bold.brightWhite + `Servers > `.brightYellow + `${client.guilds.cache.size}\n`.brightRed + `Channels > `.brightYellow + `${client.channels.cache.size}\n`.brightRed + `Users > `.brightYellow + `${client.users.cache.size}`.brightRed);
   setInterval(function() {
     onPlanetUpdate();
   }, 1000);
-  /*let channel = client.channels.cache.get('685257949429366846');
+  setTimeout(function() {
+    autoCheck(client.channels.cache.get('583416800696598571'));
+  }, 1100);
   channel.join().then(connection => {
     function playA(aud) {
       const dispatcher = aud.play('./battle.mp3', {volume: 1});
+      //console.log(dispatcher);
       dispatcher.on('end', () => {
         console.log("end");
         playA(connection);
       });
     }
     playA(connection)
-  })*/
+  })
 });
 
 client.login(config.token);
@@ -55,14 +66,7 @@ function decodeBase64Image(dataString) {
   return response;
 }
 
-Object.prototype.getByIndex = function(index) {
-  return this[Object.keys(this)[index]];
-};
-
 const delay = ms => new Promise(res => setTimeout(res, ms));
-
-const playerdata = JSON.parse(fs.readFileSync("./playerdata.json", "utf8"));
-const planets = JSON.parse(fs.readFileSync("./planets.json", "utf8"));
 
 var activePlanets;
 
@@ -291,6 +295,108 @@ function onPlayerBattle(playerID) {
   //console.log(`Zone: ${joinZone}`);
 }
 
+function autoBattle(battleID, chan) {
+  schedule.scheduleJob('*/1 * * * * *', function() {
+    if (playerdata[battleID].auto) {
+      if (!playerdata[battleID].embattled) {
+        var timer = 120;
+        var cMult;
+        var jZoneDif;
+        onPlayerBattle(battleID);
+        if (planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).zones.getByIndex(playerdata[battleID].current_zone - 1).difficulty == 3) {
+          jZoneDif = "Hard";
+        } else if (planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).zones.getByIndex(playerdata[battleID].current_zone - 1).difficulty == 2) {
+          jZoneDif = "Medium";
+        } else {
+          jZoneDif = "Easy";
+        }
+        if (playerdata[battleID].current_zone == 1) {
+          cMult = 0;
+        } else {
+          cMult = ((playerdata[battleID].current_zone - 1)%12);
+        }
+        var bMapID = planets.planets.findIndex(planet => planet.id == planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).id);
+        var battleMap = genMap(bMapID);
+        battleMap.push({
+            src: './target.png',
+            x: cMult * 117,
+            y: (Math.ceil(((playerdata[battleID].current_zone)/12))-1) * 107,
+            width: 117,
+            height: 107
+          });
+        mergeImages(battleMap, {
+            Canvas: Canvas
+          })
+          .then(target => {
+            //console.log(target);
+            client.users.fetch(battleID).then(value => {
+              var targetMap = decodeBase64Image(target);
+              const battleImg = new Discord.MessageAttachment(targetMap.data, 'map.png'); //117x107 grid tile size
+              var battleEmbed = new Discord.MessageEmbed()
+                .setTitle(`Joining Zone`)
+                .addField("Planet", `Planet ${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).id} (${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).stats.name})`)
+                .addField("Zone", `${playerdata[battleID].current_zone}`)
+                .addField("Difficulty", jZoneDif)
+                .addField("Progress", `${Math.round(planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).zones.getByIndex(playerdata[battleID].current_zone - 1).progress * 100)}%`)
+                .addField("Time Left", `**${timer}s**`)
+                .attachFiles(battleImg)
+                .setThumbnail(`https://raw.githubusercontent.com/NunzioArdi/saliengame/master/steamcdn-a.akamaihd.net/steamcommunity/public/assets/saliengame/planets/Planet${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).stats.image_filename}`)
+                .setImage('attachment://map.png')
+                .setTimestamp()
+                .setFooter(`${value.username}#${value.discriminator}`, `https://cdn.discordapp.com/avatars/${value.id}/${value.avatar}.jpg`)
+                .setColor('#e9f634');
+              //message.channel.send(`<@!${battleID}>`);
+              chan.send(battleEmbed).then(msg => {
+                var battleInt = setInterval(function() {
+                  timer -= 5;
+                  var newBattleEmbed = new Discord.MessageEmbed()
+                    .setTitle(`Embattled`)
+                    .addField("Planet", `Planet ${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).id} (${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).stats.name})`)
+                    .addField("Zone", `${playerdata[battleID].current_zone}`)
+                    .addField("Difficulty", jZoneDif)
+                    .addField("Progress", `${Math.round(planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).zones.getByIndex(playerdata[battleID].current_zone - 1).progress * 100)}%`)
+                    .addField("Time Left", `**${timer}s**`)
+                    .setThumbnail(`https://raw.githubusercontent.com/NunzioArdi/saliengame/master/steamcdn-a.akamaihd.net/steamcommunity/public/assets/saliengame/planets/Planet${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).stats.image_filename}`)
+                    .setImage('attachment://map.png')
+                    .setTimestamp()
+                    .setFooter(`${value.username}#${value.discriminator}`, `https://cdn.discordapp.com/avatars/${value.id}/${value.avatar}.jpg`)
+                    .setColor('#e9f634');
+                  msg.edit(newBattleEmbed)
+                  if (timer === 0) {
+                    var finalBattleEmbed = new Discord.MessageEmbed()
+                      .setTitle(`Battle Complete`)
+                      .addField("Planet", `Planet ${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).id} (${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).stats.name})`)
+                      .addField("Zone", `${playerdata[battleID].current_zone}`)
+                      .addField("Difficulty", jZoneDif)
+                      .addField("Progress", `${Math.round(planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).zones.getByIndex(playerdata[battleID].current_zone - 1).progress * 100)}%`)
+                      .addField("Time Left", `**${timer}s**`)
+                      .addField("Score", `${playerdata[battleID].xp} (+${playerdata[battleID].nextxp})`)
+                      .setThumbnail(`https://raw.githubusercontent.com/NunzioArdi/saliengame/master/steamcdn-a.akamaihd.net/steamcommunity/public/assets/saliengame/planets/Planet${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).stats.image_filename}`)
+                      .setImage('attachment://map.png')
+                      .setTimestamp()
+                      .setFooter(`${value.username}#${value.discriminator}`, `https://cdn.discordapp.com/avatars/${value.id}/${value.avatar}.jpg`)
+                      .setColor('#e9f634');
+                    msg.edit(finalBattleEmbed)
+                    clearInterval(battleInt)
+                  }
+                }, 5000);
+              })
+            }).catch(console.error);
+          });
+      }
+    }
+  });
+}
+
+function autoCheck(ch) {
+  for (var key of Object.keys(playerdata)) {
+    if (playerdata[key].auto) {
+      ch.send(`<@!${key}> You have auto battles enabled, type \u0060>auto\u0060 to disable (This message only appears at bot startup)`);
+      autoBattle(key, ch);
+    }
+  }
+}
+
 client.on("message", async message => {
   if (message.channel.id !== '583416800696598571') return; //id of saliensimulator channel, hardcoded bc bot is made for a specific server
   if (message.author.bot) return;
@@ -319,7 +425,8 @@ client.on("message", async message => {
               current_planet: "",
               current_zone: "",
               nextxp: 0,
-              embattled: false
+              embattled: false,
+              auto: false
             };
             var successEmbed = new Discord.MessageEmbed()
               .setTitle(`Success!`)
@@ -588,11 +695,6 @@ client.on("message", async message => {
           onPlayerBattle(message.author.id);
           var bMapID = planets.planets.findIndex(planet => planet.id == planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).id);
           var battleMap = genMap(bMapID);
-          console.log(playerdata[battleID].current_zone)
-          console.log((Math.ceil(((playerdata[battleID].current_zone)/12))-1) * 107)
-          console.log((Math.ceil(((playerdata[battleID].current_zone)/12))-1))
-          console.log(Math.ceil(((playerdata[battleID].current_zone)/12)))
-          console.log(cMult);
           battleMap.push({
               src: './target.png',
               x: cMult * 117,
@@ -657,15 +759,6 @@ client.on("message", async message => {
                     }
                   }, 5000);
                 })
-                /*setTimeout(function() {
-                  var finishEmbed = new Discord.MessageEmbed()
-                    .setTitle(`Battle Finished`)
-                    .addField("Score", `${playerdata[message.author.id].xp} (+${playerdata[message.author.id].nextxp})`)
-                    .setTimestamp()
-                    .setColor('#e9f634');
-                  message.channel.send(`<@!${battleID}>`);
-                  message.channel.send(finishEmbed);
-                }, 120000);*/
               }).catch(console.error);
             });
       } else {
@@ -683,101 +776,30 @@ if (command === "auto") {
   var battleID = message.author.id;
   if (args.length == 0) {
     if (playerdata[message.author.id]) {
-      schedule.scheduleJob('*/1 * * * * *', function() {
-        if (!playerdata[battleID].embattled) {
-          var timer = 120;
-          var cMult;
-          var jZoneDif;
-          onPlayerBattle(message.author.id);
-          if (planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).zones.getByIndex(playerdata[battleID].current_zone - 1).difficulty == 3) {
-            jZoneDif = "Hard";
-          } else if (planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).zones.getByIndex(playerdata[battleID].current_zone - 1).difficulty == 2) {
-            jZoneDif = "Medium";
-          } else {
-            jZoneDif = "Easy";
-          }
-          if (playerdata[battleID].current_zone == 1) {
-            cMult = 0;
-          } else {
-            cMult = ((playerdata[battleID].current_zone - 1)%12);
-          }
-          var bMapID = planets.planets.findIndex(planet => planet.id == planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).id);
-          var battleMap = genMap(bMapID);
-          battleMap.push({
-              src: './target.png',
-              x: cMult * 117,
-              y: (Math.ceil(((playerdata[battleID].current_zone)/12))-1) * 107,
-              width: 117,
-              height: 107
-            });
-          mergeImages(battleMap, {
-              Canvas: Canvas
-            })
-            .then(target => {
-              //console.log(target);
-              client.users.fetch(message.author.id).then(value => {
-                var targetMap = decodeBase64Image(target);
-                const battleImg = new Discord.MessageAttachment(targetMap.data, 'map.png'); //117x107 grid tile size
-                var battleEmbed = new Discord.MessageEmbed()
-                  .setTitle(`Joining Zone`)
-                  .addField("Planet", `Planet ${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).id} (${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).stats.name})`)
-                  .addField("Zone", `${playerdata[battleID].current_zone}`)
-                  .addField("Difficulty", jZoneDif)
-                  .addField("Progress", `${Math.round(planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).zones.getByIndex(playerdata[battleID].current_zone - 1).progress * 100)}%`)
-                  .addField("Time Left", `**${timer}s**`)
-                  .attachFiles(battleImg)
-                  .setThumbnail(`https://raw.githubusercontent.com/NunzioArdi/saliengame/master/steamcdn-a.akamaihd.net/steamcommunity/public/assets/saliengame/planets/Planet${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).stats.image_filename}`)
-                  .setImage('attachment://map.png')
-                  .setTimestamp()
-                  .setFooter(`${value.username}#${value.discriminator}`, `https://cdn.discordapp.com/avatars/${value.id}/${value.avatar}.jpg`)
-                  .setColor('#e9f634');
-                //message.channel.send(`<@!${battleID}>`);
-                message.channel.send(battleEmbed).then(msg => {
-                  var battleInt = setInterval(function() {
-                    timer -= 5;
-                    var newBattleEmbed = new Discord.MessageEmbed()
-                      .setTitle(`Embattled`)
-                      .addField("Planet", `Planet ${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).id} (${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).stats.name})`)
-                      .addField("Zone", `${playerdata[battleID].current_zone}`)
-                      .addField("Difficulty", jZoneDif)
-                      .addField("Progress", `${Math.round(planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).zones.getByIndex(playerdata[battleID].current_zone - 1).progress * 100)}%`)
-                      .addField("Time Left", `**${timer}s**`)
-                      .setThumbnail(`https://raw.githubusercontent.com/NunzioArdi/saliengame/master/steamcdn-a.akamaihd.net/steamcommunity/public/assets/saliengame/planets/Planet${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).stats.image_filename}`)
-                      .setImage('attachment://map.png')
-                      .setTimestamp()
-                      .setFooter(`${value.username}#${value.discriminator}`, `https://cdn.discordapp.com/avatars/${value.id}/${value.avatar}.jpg`)
-                      .setColor('#e9f634');
-                    msg.edit(newBattleEmbed)
-                    if (timer === 0) {
-                      var finalBattleEmbed = new Discord.MessageEmbed()
-                        .setTitle(`Battle Complete`)
-                        .addField("Planet", `Planet ${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).id} (${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).stats.name})`)
-                        .addField("Zone", `${playerdata[battleID].current_zone}`)
-                        .addField("Difficulty", jZoneDif)
-                        .addField("Progress", `${Math.round(planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).zones.getByIndex(playerdata[battleID].current_zone - 1).progress * 100)}%`)
-                        .addField("Time Left", `**${timer}s**`)
-                        .addField("Score", `${playerdata[message.author.id].xp} (+${playerdata[message.author.id].nextxp})`)
-                        .setThumbnail(`https://raw.githubusercontent.com/NunzioArdi/saliengame/master/steamcdn-a.akamaihd.net/steamcommunity/public/assets/saliengame/planets/Planet${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).stats.image_filename}`)
-                        .setImage('attachment://map.png')
-                        .setTimestamp()
-                        .setFooter(`${value.username}#${value.discriminator}`, `https://cdn.discordapp.com/avatars/${value.id}/${value.avatar}.jpg`)
-                        .setColor('#e9f634');
-                      msg.edit(finalBattleEmbed)
-                      clearInterval(battleInt)
-                    }
-                  }, 5000);
-                })
-                /*setTimeout(function() {
-                  var finishEmbed = new Discord.MessageEmbed()
-                    .setTitle(`Battle Finished`)
-                    .addField("Score", `${playerdata[message.author.id].xp} (+${playerdata[message.author.id].nextxp})`)
-                    .setTimestamp()
-                    .setColor('#e9f634');
-                  message.channel.send(`<@!${battleID}>`);
-                  message.channel.send(finishEmbed);
-                }, 120000);*/
-              }).catch(console.error);
-            });
+      client.users.fetch(message.author.id).then(value => {
+        if (playerdata[message.author.id].auto) {
+          var autoDisableEmbed = new Discord.MessageEmbed()
+            .setColor('#e9f634')
+            .setTitle(`Auto Battles Disabled`)
+            .setImage(`https://cdn.discordapp.com/emojis/462711870512562176.gif?v=1`)
+            .setFooter(`${value.username}#${value.discriminator}`, `https://cdn.discordapp.com/avatars/${value.id}/${value.avatar}.jpg`);
+          message.channel.send(autoDisableEmbed);
+          playerdata[message.author.id].auto = false;
+          fs.writeFile("./playerdata.json", JSON.stringify(playerdata), (err) => {
+            if (err) console.error(err)
+          });
+        } else {
+          var autoEnableEmbed = new Discord.MessageEmbed()
+            .setColor('#e9f634')
+            .setTitle(`Auto Battles Enabled`)
+            .setImage(`https://cdn.discordapp.com/emojis/462982867392266250.gif?v=1`)
+            .setFooter(`${value.username}#${value.discriminator}`, `https://cdn.discordapp.com/avatars/${value.id}/${value.avatar}.jpg`);
+          message.channel.send(autoEnableEmbed);
+          playerdata[message.author.id].auto = true;
+          fs.writeFile("./playerdata.json", JSON.stringify(playerdata), (err) => {
+            if (err) console.error(err)
+          });
+          autoBattle(battleID, message.channel);
         }
       })
     } else {
