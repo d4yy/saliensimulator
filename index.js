@@ -192,7 +192,7 @@ function onPlayerBattle(playerID) {
   }
   var maxid = 0;
   activeZones.map(function(obj) {
-    if (obj.difficulty > maxid) maxid = +obj.difficulty;
+    if ((obj.difficulty > maxid) && (obj.progress < 1)) maxid = +obj.difficulty;
   });
   var zoneIndex = activeZones.findIndex(zone => (zone.difficulty == maxid) && (zone.progress < 1));
   var joinZone = activeZones.getByIndex(zoneIndex).id;
@@ -210,6 +210,8 @@ function onPlayerBattle(playerID) {
       return 4;
     }
   }
+
+  var jZoneDif;
   var joinPlanet = getPlanetFromZone(zoneIndex);
   playerdata[playerID].current_planet = joinPlanet;
   playerdata[playerID].current_zone = joinZone;
@@ -217,13 +219,19 @@ function onPlayerBattle(playerID) {
   if (planets.planets.getByIndex(activePlanets[joinPlanet]).zones.getByIndex(joinZone - 1).difficulty == 3) {
     difMult = 0.01;
     playerdata[playerID].nextxp = 2400;
+    jZoneDif = "Hard";
   } else if (planets.planets.getByIndex(activePlanets[joinPlanet]).zones.getByIndex(joinZone - 1).difficulty == 2) {
     difMult = 0.02;
     playerdata[playerID].nextxp = 1200;
+    jZoneDif = "Medium";
   } else {
     difMult = 0.1;
     playerdata[playerID].nextxp = 600;
+    jZoneDif = "Easy";
   }
+
+  console.log(`[`.bold.brightWhite+`${playerdata[playerID].name}`.bold.brightCyan+`] >> Planet: `.bold.brightWhite+`${planets.planets.getByIndex(activePlanets[joinPlanet]).id} (${planets.planets.getByIndex(activePlanets[joinPlanet]).stats.name}) `.bold.brightGreen+`- Hard: `.bold.brightWhite+`${planets.planets.getByIndex(activePlanets[joinPlanet]).stats.zones_hard} `.bold.brightYellow+`- Medium: `.bold.brightWhite+`${planets.planets.getByIndex(activePlanets[joinPlanet]).stats.zones_medium} `.bold.brightYellow+`- Easy: `.bold.brightWhite+`${planets.planets.getByIndex(activePlanets[joinPlanet]).stats.zones_easy} `.bold.brightYellow+`- Captured: `.bold.brightWhite+`${((planets.planets.getByIndex(activePlanets[joinPlanet]).stats.progress)*100).toFixed(2)}% `.bold.brightYellow+`- Players: `.bold.brightWhite+`${planets.planets.getByIndex(activePlanets[joinPlanet]).stats.total_joins} `.bold.brightYellow+`=> Zone: `.bold.brightWhite+`${planets.planets.getByIndex(activePlanets[joinPlanet]).zones.getByIndex(joinZone - 1).id} (${jZoneDif}) `.bold.brightGreen+`- Progress: `.bold.brightWhite+`${Math.round((planets.planets.getByIndex(activePlanets[joinPlanet]).zones.getByIndex(joinZone - 1).progress)*100)}%`.bold.brightYellow);
+
   playerdata[playerID].embattled = true;
   planets.planets.getByIndex(activePlanets[joinPlanet]).stats.total_joins += 1;
   setTimeout(function() {
@@ -348,7 +356,7 @@ function autoBattle(battleID, chan) {
               //message.channel.send(`<@!${battleID}>`);
               chan.send(battleEmbed).then(msg => {
                 var battleInt = setInterval(function() {
-                  timer -= 5;
+                  timer -= 10;
                   var newBattleEmbed = new Discord.MessageEmbed()
                     .setTitle(`Embattled`)
                     .addField("Planet", `Planet ${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).id} (${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).stats.name})`)
@@ -379,7 +387,7 @@ function autoBattle(battleID, chan) {
                     msg.edit(finalBattleEmbed)
                     clearInterval(battleInt)
                   }
-                }, 5000);
+                }, 10000);
               })
             }).catch(console.error);
           });
@@ -726,7 +734,7 @@ client.on("message", async message => {
                 //message.channel.send(`<@!${battleID}>`);
                 message.channel.send(battleEmbed).then(msg => {
                   var battleInt = setInterval(function() {
-                    timer -= 5;
+                    timer -= 10;
                     var newBattleEmbed = new Discord.MessageEmbed()
                       .setTitle(`Embattled`)
                       .addField("Planet", `Planet ${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).id} (${planets.planets.getByIndex(activePlanets[playerdata[battleID].current_planet]).stats.name})`)
@@ -757,7 +765,7 @@ client.on("message", async message => {
                       msg.edit(finalBattleEmbed)
                       clearInterval(battleInt)
                     }
-                  }, 5000);
+                  }, 10000);
                 })
               }).catch(console.error);
             });
