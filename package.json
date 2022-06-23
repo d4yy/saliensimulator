@@ -13,7 +13,7 @@
     "fs": "^0.0.1-security",
     "htmlparser2": "^4.1.0",
     "jquery": "^3.4.1",
-    "jsdom": "^16.2.0",
+    "jsdom": "^16.5.0",
     "merge-images": "^1.1.0",
     "merge-images-v2": "^2.0.1",
     "node-fetch": "^2.6.0",
